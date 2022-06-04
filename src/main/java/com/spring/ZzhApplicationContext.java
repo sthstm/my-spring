@@ -4,6 +4,8 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,6 +18,8 @@ public class ZzhApplicationContext {
 
     // 存储Bean的定义
     private ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
+
+    private List<BeanPostProcessor> beanPostProcessorList = new ArrayList<>();
 
     public ZzhApplicationContext(Class configClass) {
         this.configClass = configClass;
@@ -54,6 +58,12 @@ public class ZzhApplicationContext {
                 ((BeanNameAware)instance).setBeanName(beanName);
             }
 
+            // 初始化前调用postProcessBeforeInitialization
+            for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
+                // 具体实现逻辑由程序员写
+                instance= beanPostProcessor.postProcessBeforeInitialization(instance, beanName);
+            }
+
             // 初始化
             if (instance instanceof InitializingBean) {
                 try {
@@ -63,8 +73,11 @@ public class ZzhApplicationContext {
                 }
             }
 
-            // BeanPostProcessor
-
+            // 初始化后调用postProcessAfterInitialization
+            for (BeanPostProcessor beanPostProcessor : beanPostProcessorList) {
+                // 具体实现逻辑由程序员写
+                instance= beanPostProcessor.postProcessAfterInitialization(instance, beanName);
+            }
 
             return instance;
         } catch (InstantiationException e) {
@@ -120,6 +133,12 @@ public class ZzhApplicationContext {
                         if (clazz.isAnnotationPresent(Component.class)) {
                             // 当前类为一个bean
 
+                            // 创建BeanPostProcessor
+                            if (BeanPostProcessor.class.isAssignableFrom(clazz)) {
+                                    BeanPostProcessor instance = (BeanPostProcessor) clazz.getDeclaredConstructor().newInstance();
+                                    beanPostProcessorList.add(instance);
+                            }
+
                             Component componentAnnotation = clazz.getDeclaredAnnotation(Component.class);
                             String beanName = componentAnnotation.value();
 
@@ -138,6 +157,14 @@ public class ZzhApplicationContext {
 
                         }
                     } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (InstantiationException e) {
+                        e.printStackTrace();
+                    } catch (InvocationTargetException e) {
+                        e.printStackTrace();
+                    } catch (NoSuchMethodException e) {
+                        e.printStackTrace();
+                    } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }
 
