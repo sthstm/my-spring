@@ -38,7 +38,7 @@ public class ZzhApplicationContext {
         }
     }
 
-    public Object createBean(String beanName, BeanDefinition beanDefinition) {
+    private Object createBean(String beanName, BeanDefinition beanDefinition) {
         Class clazz = beanDefinition.getClazz();
         try {
             Object instance = clazz.getDeclaredConstructor().newInstance();
